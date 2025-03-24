@@ -1,6 +1,3 @@
-require 'yaml'
-require 'rack/response'
-
 module IdempotentRequest
   class Middleware
     def initialize(app, config = {})
