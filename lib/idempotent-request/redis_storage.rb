@@ -25,7 +25,7 @@ module IdempotentRequest
       redis.get(namespaced_key(key))
     end
 
-    def write(key, payload)
+    def write(key, payload, expire_time = nil)
       options = {}
       options[:ex] = expire_time && expire_time.to_i > 0 ?
         expire_time.to_i :

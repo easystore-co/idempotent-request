@@ -47,16 +47,16 @@ RSpec.describe IdempotentRequest::RedisStorage do
       let(:expire_time) { nil }
 
       it 'should not set expiration' do
-        expect(redis).to receive(:set).with(key, payload, nx: true)
+        expect(redis).to receive(:set).with(key, payload, ex: expire_time)
         expect(redis).not_to receive(:expire)
-        redis_storage.write(key, payload)
+        redis_storage.write(key, payload, expire_time)
       end
     end
 
     context 'when expire time is set' do
       it 'should set expiration' do
-        expect(redis).to receive(:set).with(key, payload, nx: true, ex: expire_time)
-        redis_storage.write(key, payload)
+        expect(redis).to receive(:set).with(key, payload, ex: expire_time)
+        redis_storage.write(key, payload, expire_time)
       end
     end
   end
