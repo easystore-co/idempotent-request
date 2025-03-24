@@ -5,7 +5,7 @@ RSpec.describe IdempotentRequest::Middleware do
   let(:env) do
     env_for('https://qonto.eu', method: 'POST')
       .merge!(
-        'HTTP_X_QONTO_IDEMPOTENCY_KEY' => 'dont-repeat-this-request-pls'
+        'HTTP_IDEMPOTENCY_KEY' => 'dont-repeat-this-request-pls'
       )
   end
   let(:storage) { @memory_storage ||= IdempotentRequest::MemoryStorage.new }
