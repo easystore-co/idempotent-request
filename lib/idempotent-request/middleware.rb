@@ -35,7 +35,7 @@ module IdempotentRequest
     end
 
     def read_idempotent_request
-      result = storage.read rescue nil
+      result = storage.read
       return unless result
 
       status, headers, response = result
@@ -44,22 +44,16 @@ module IdempotentRequest
     end
 
     def write_idempotent_request
-      begin
-        return unless storage.lock
-      rescue
-        request.env['idempotent.request']['error'] = 'Failed to lock the key'
-      end
+      # Only consider 'false' lock result as key existed, and treat as concurrent request
+      # Consider 'true', nil, or other values as key not existed, and continue as normal request
+      return if storage.lock == false
 
       begin
         result = app.call(request.env)
-
-        begin
-          storage.write(*result)
-          request.env['idempotent.request']['write'] = result
-        rescue
-        end
+        storage.write(*result)
+        request.env['idempotent.request']['write'] = result
       ensure
-        request.env['idempotent.request']['unlocked'] = storage.unlock rescue nil
+        request.env['idempotent.request']['unlocked'] = storage.unlock
       end
 
       result
