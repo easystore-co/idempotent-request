@@ -4,9 +4,10 @@ RSpec.describe IdempotentRequest::RequestManager do
   let(:url) { 'http://qonto.eu' }
   let(:default_env) { env_for(url) }
   let(:env) { default_env }
+  let(:expire_time) { 3600 }
   let(:request) { IdempotentRequest::Request.new(env) }
   let!(:memory_storage) { @memory_storage ||= IdempotentRequest::MemoryStorage.new }
-  let(:request_storage) { described_class.new(request, { storage: memory_storage }) }
+  let(:request_storage) { described_class.new(request, { storage: memory_storage, expire_time: expire_time }) }
 
   before do
     allow(request).to receive(:key).and_return('data-key')
@@ -15,7 +16,7 @@ RSpec.describe IdempotentRequest::RequestManager do
 
   describe '#lock' do
     it 'delegates to storage service' do
-      expect(memory_storage).to receive(:lock).with(request.key)
+      expect(memory_storage).to receive(:lock).with(request.key, expire_time)
       request_storage.lock
     end
 

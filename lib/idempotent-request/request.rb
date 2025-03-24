@@ -4,7 +4,7 @@ module IdempotentRequest
 
     def initialize(env, config = {})
       @request = Rack::Request.new(env)
-      @header_name = config.fetch(:header_key, 'HTTP_IDEMPOTENCY_KEY')
+      @header_name = config.fetch(:header_key, 'Idempotency-Key')
     end
 
     def key
