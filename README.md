@@ -1,5 +1,3 @@
-![Gem Version](https://badge.fury.io/rb/idempotent-request.svg) ![CI Status](https://github.com/qonto/idempotent-request/actions/workflows/tests.yml/badge.svg)
-
 # Idempotent Request
 
 Rack middleware ensuring at most once requests for mutating endpoints.
@@ -9,16 +7,14 @@ Rack middleware ensuring at most once requests for mutating endpoints.
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'idempotent-request'
+gem 'idempotent-request', git: "https://github.com/easystore-co/idempotent-request.git"
 ```
 
 And then execute:
 
     $ bundle
 
-Or install it yourself as:
 
-    $ gem install idempotent-request
 
 ## How it works
 
