@@ -1,8 +1,11 @@
+require 'yaml'
+require 'rack/response'
+
 module IdempotentRequest
   class Middleware
     def initialize(app, config = {})
       @app = app
-      @config = config.merge(load_config())
+      @config = config.merge(load_config(config.fetch(:config_file, 'config/idempotent.yml')))
       @policy = @config.fetch(:policy)
       @notifier = ActiveSupport::Notifications if defined?(ActiveSupport::Notifications)
       @concurrent_response_status = @config.fetch(:concurrent_response_status, 429)
@@ -36,7 +39,7 @@ module IdempotentRequest
 
     def read_idempotent_request
       result = storage.read rescue nil
-      return if result.blank?
+      return unless result
 
       status, headers, response = result
       headers.merge!(@replayed_response_header => true)
@@ -50,15 +53,17 @@ module IdempotentRequest
         request.env['idempotent.request']['error'] = 'Failed to lock the key'
       end
 
-      result = app.call(request.env)
-
       begin
-        storage.write(*result)
-        request.env['idempotent.request']['write'] = result
-      rescue
-      end
+        result = app.call(request.env)
 
-      request.env['idempotent.request']['unlocked'] = storage.unlock rescue nil
+        begin
+          storage.write(*result)
+          request.env['idempotent.request']['write'] = result
+        rescue
+        end
+      ensure
+        request.env['idempotent.request']['unlocked'] = storage.unlock rescue nil
+      end
 
       result
     end
@@ -67,13 +72,13 @@ module IdempotentRequest
       status = @concurrent_response_status
       headers = { 'Content-Type' => 'application/json' }
       body = [
-        {
+        Oj.dump({
           error: {
             type: "TooManyRequests",
             message: "Concurrent requests detected",
             code: "too_many_requests"
           }
-        }.to_json
+        })
       ]
       request.env['idempotent.request']['concurrent_request_response'] = true
       Rack::Response.new(body, status, headers).finish
@@ -99,14 +104,27 @@ module IdempotentRequest
       @request ||= Request.new(env, config)
     end
 
-    def load_config(config_file = Rails.root.join('config', 'idempotent.yml'))
+    def load_config(config_file)
       return {} unless File.exist?(config_file)
+      
+      config = YAML.load_file(config_file) || {}
 
-      config = YAML.load_file(config_file).deep_symbolize_keys
-      env = Rails.env.to_s.to_sym
+      if config.respond_to? :deep_symbolize_keys!
+        config.deep_symbolize_keys!
+      else
+        symbolize_keys_deep!(config)
+      end
 
-      # Use environment specific settings if available, otherwise use default
-      config[env] || config[:default] || {}
+      environment = ENV["APP_ENV"] || ENV["RAILS_ENV"] || ENV["RACK_ENV"] || "default"
+      config[environment.to_sym] || {}
+    end
+    
+    def symbolize_keys_deep!(hash)
+      hash.keys.each do |k|
+        symkey = k.respond_to?(:to_sym) ? k.to_sym : k
+        hash[symkey] = hash.delete k
+        symbolize_keys_deep! hash[symkey] if hash[symkey].is_a? Hash
+      end
     end
   end
 end

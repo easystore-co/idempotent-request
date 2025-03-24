@@ -12,14 +12,13 @@ RSpec.describe IdempotentRequest::Middleware do
   let(:policy) do
     class_double('IdempotentRequest::policy', new: double(should?: true))
   end
-  let(:conflict_response_status) { 429 }
+  let(:config_file) { 'spec/support/idempotent.yml' }
 
   let(:middleware) do
     described_class.new(app,
       policy: policy,
       storage: storage,
-      conflict_response_status: conflict_response_status,
-      header_key: 'X-Qonto-Idempotency-Key'
+      config_file: config_file
     )
   end
 
@@ -89,7 +88,7 @@ RSpec.describe IdempotentRequest::Middleware do
       end
 
       context 'when custom response status is set' do
-        let(:conflict_response_status) { 409 }
+        let(:config_file) { 'spec/support/idempotent_custom_response_status.yml' }
 
         it 'returns 409 status' do
           status, _headers, _body = middleware.call(env)
