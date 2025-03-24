@@ -64,10 +64,10 @@ module IdempotentRequest
       headers = { 'Content-Type' => 'application/json' }
       body = [
         Oj.dump({
-          error: {
-            type: "TooManyRequests",
-            message: "Concurrent requests detected",
-            code: "too_many_requests"
+          "error" => {
+            "type" => "TooManyRequests",
+            "message" => "Concurrent requests detected",
+            "code" => "too_many_requests"
           }
         })
       ]
