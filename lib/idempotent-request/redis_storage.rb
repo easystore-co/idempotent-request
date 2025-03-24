@@ -1,19 +1,17 @@
 module IdempotentRequest
   class RedisStorage
-    attr_reader :redis, :namespace, :default_expire_time
+    attr_reader :redis, :namespace
 
-    def initialize(redis, config = {})
+    def initialize(redis, namespace: 'idempotency_keys')
       @redis = redis
-      @namespace = config.fetch(:namespace, 'idempotency_keys')
-      @default_expire_time = config[:expire_time]
+      @namespace = namespace
     end
 
     def lock(key, expire_time = nil)
       options = {nx: true}
-      options[:ex] = expire_time && expire_time.to_i > 0 ?
-        expire_time.to_i :
-        default_expire_time
-
+      if expire_time && expire_time.to_i > 0
+        options[:ex] = expire_time.to_i
+      end
       redis.set(lock_key(key), Time.now.to_f, **options)
     end
 
@@ -27,10 +25,9 @@ module IdempotentRequest
 
     def write(key, payload, expire_time = nil)
       options = {}
-      options[:ex] = expire_time && expire_time.to_i > 0 ?
-        expire_time.to_i :
-        default_expire_time
-
+      if expire_time && expire_time.to_i > 0
+        options[:ex] = expire_time.to_i
+      end
       redis.set(namespaced_key(key), payload, **options)
     end
 

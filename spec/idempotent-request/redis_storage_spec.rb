@@ -4,7 +4,7 @@ RSpec.describe IdempotentRequest::RedisStorage do
   let(:redis) { FakeRedis::Redis.new }
   let(:expire_time) { 3600 }
   let(:namespace) { 'idempotency_keys' }
-  let(:redis_storage) { described_class.new(redis, expire_time: expire_time, namespace: namespace) }
+  let(:redis_storage) { described_class.new(redis, namespace: namespace) }
 
   describe '#read' do
     it 'should be called' do
@@ -19,7 +19,7 @@ RSpec.describe IdempotentRequest::RedisStorage do
 
     it 'should add lock' do
       expect(redis).to receive(:set).with(lock_key, Float, nx: true, ex: expire_time)
-      redis_storage.lock(key)
+      redis_storage.lock(key, expire_time)
     end
   end
 
@@ -27,7 +27,7 @@ RSpec.describe IdempotentRequest::RedisStorage do
     let(:key) { 'key' }
     let(:lock_key) { "#{namespace}:lock:#{key}" }
 
-    before { redis_storage.lock(key) }
+    before { redis_storage.lock(key, expire_time) }
 
     it 'should unlock' do
       expect(redis).to receive(:del).with(lock_key).and_call_original
@@ -47,7 +47,7 @@ RSpec.describe IdempotentRequest::RedisStorage do
       let(:expire_time) { nil }
 
       it 'should not set expiration' do
-        expect(redis).to receive(:set).with(key, payload, ex: expire_time)
+        expect(redis).to receive(:set).with(key, payload)
         expect(redis).not_to receive(:expire)
         redis_storage.write(key, payload, expire_time)
       end
