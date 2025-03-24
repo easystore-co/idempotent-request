@@ -3,10 +3,10 @@ module IdempotentRequest
     def initialize(app, config = {})
       @app = app
       @config = config.merge(load_config(config.fetch(:config_file, 'config/idempotent.yml')))
-      @policy = @config.fetch(:policy)
-      @notifier = ActiveSupport::Notifications if defined?(ActiveSupport::Notifications)
+      @policy = @config.fetch(:policy, IdempotentRequest::Policy)
       @concurrent_response_status = @config.fetch(:concurrent_response_status, 429)
       @replayed_response_header = @config.fetch(:replayed_response_header, 'Idempotency-Replayed')
+      @notifier = ActiveSupport::Notifications if defined?(ActiveSupport::Notifications)
     end
 
     def call(env)

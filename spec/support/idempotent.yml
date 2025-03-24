@@ -2,7 +2,7 @@ default: &default
   expire_time: 3600
   concurrent_response_status: 429
   replayed_response_header: Idempotency-Replayed
-  header_key: HTTP_X_QONTO_IDEMPOTENCY_KEY
+  header_key: Idempotency-Key
   routes:
     - path: /api/v1/test/*
       http_method: POST
