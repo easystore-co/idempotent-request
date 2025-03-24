@@ -1,69 +1,98 @@
-![Gem Version](https://badge.fury.io/rb/idempotent-request.svg) ![CI Status](https://github.com/qonto/idempotent-request/actions/workflows/tests.yml/badge.svg)
-
-# Idempotent Request
+# Idempotent Request for Ruby on Rails
 
 Rack middleware ensuring at most once requests for mutating endpoints.
 
-## Installation
-
-Add this line to your application's Gemfile:
-
-```ruby
-gem 'idempotent-request'
-```
-
-And then execute:
-
-    $ bundle
-
-Or install it yourself as:
-
-    $ gem install idempotent-request
-
-## How it works
+## How does idempotency mechanism works?
 
 1.  Front-end generates a unique `key` then a user goes to a specific route (for example, transfer page).
 2.  When user clicks "Submit" button, the `key` is sent in the header `idempotency-key` and back-end stores server response into redis.
 3.  All the consecutive requests with the `key` won't be executer by the server and the result of previous response (2) will be fetched from redis.
 4.  Once the user leaves or refreshes the page, front-end should re-generate the key.
 
-## Configuration
+
+## Installation
+
+Add this line to your application's Gemfile:
+
+```ruby
+gem 'idempotent-request', git: "https://github.com/easystore-co/idempotent-request.git"
+```
+
+And then execute:
+
+    $ bundle install
+
+## API
+| Parameter | Description | Required/Optional |
+| --------- | ----------- | ----------------- |
+| storage | The storage instance that use to store the lock and cached response of idempotent requests | Required |
+| policy | The class that control this request should execute idempotency mechanism or not. Default will be referring to the config file (`config/idempotent.yml`) | Optional |
+| callback | The callback handler | Optional |
+| config_file | Customise the configuration file path. Default: `config/idempotent.yml` | Optional |
+
+
+### Example of Usage
 ```ruby
 # application.rb
 config.middleware.use IdempotentRequest::Middleware,
-  storage: IdempotentRequest::RedisStorage.new(::Redis.current, expire_time: 1.day),
-  policy: YOUR_CLASS
+  storage: IdempotentRequest::RedisStorage.new(::Redis.current),
+  policy: IdempotentRequest::Policy,
+  callback: IdempotentRequest::RailsCallback,
+  config_file: 'custom/idempotent/settings.yml'
 ```
 
-To define a policy, whether a request should be idempotent, you have to provider a class with the following interface:
+### Configuration File
 
-```ruby
-class Policy
-  attr_reader :request
+The configuration YAML file defines how the idempotency mechanism behaves. Default reading `config/idempotent.yml`
 
-  def initialize(request)
-    @request = request
-  end
+#### Configuration Options
 
-  def should?
-    # request is Rack::Request class
-  end
-end
+| Option | Description | Default |
+| ------ | ----------- | ------- |
+| `expire_time` | Time in seconds for how long the idempotency keys remain valid | 3600 (1 hour) |
+| `concurrent_response_status` | HTTP status code returned when a concurrent request with the same key is detected | 429 |
+| `replayed_response_header` | HTTP header name that will be added to responses that are served from cache | Idempotency-Replayed |
+| `header_key` | The HTTP header key that contains the idempotency key | Idempotency-Key |
+| `routes` | Array of route configurations to specify which endpoints should be idempotent | [] |
+
+#### Route Configuration
+
+Each route entry can have the following options:
+
+| Option | Description | Required |
+| ------ | ----------- | -------- |
+| `path` | URL path pattern (supports wildcards) | Yes |
+| `http_method` | HTTP method (GET, POST, PUT, PATCH, DELETE) | Yes |
+| `expire_time` | Override default expiration time for this route | No |
+
+
+#### Example
+```yaml
+default: &default
+  # How long idempotency keys are valid (in seconds)
+  expire_time: 3600
+  
+  # HTTP status code returned for concurrent requests
+  concurrent_response_status: 429
+  
+  # HTTP header name for indicating replayed responses
+  replayed_response_header: Idempotency-Replayed
+  
+  # The HTTP header key that contains the idempotency key
+  header_key: Idempotency-Key
+  
+  # Route-specific configurations
+  routes:
+    - path: /api/v1/test/*     # Path pattern (supports wildcards)
+      http_method: POST        # HTTP method to make idempotent
+      expire_time: 180         # Override default expire time for this route
 ```
 
-### Example of integration for rails
 
+### Custom Options
 
-```ruby
-# application.rb
-config.middleware.use IdempotentRequest::Middleware,
-  storage: IdempotentRequest::RedisStorage.new(::Redis.current, expire_time: 1.day),
-  policy: IdempotentRequest::Policy
-
-config.idempotent_routes = [
-  { controller: :'v1/transfers', action: :create },
-]
-```
+### Policy
+Custom class to decide whether the request should be idempotent.
 
 ```ruby
 # lib/idempotent-request/policy.rb
@@ -76,50 +105,11 @@ module IdempotentRequest
     end
 
     def should?
-      route = Rails.application.routes.recognize_path(request.path, method: request.request_method)
-      Rails.application.config.idempotent_routes.any? do |idempotent_route|
-        idempotent_route[:controller] == route[:controller].to_sym &&
-          idempotent_route[:action] == route[:action].to_sym
-      end
+      # Custom logic to 
     end
   end
 end
 ```
-
-
-### Use ActiveSupport::Notifications to read events
-
-```ruby
-# config/initializers/idempotent_request.rb
-ActiveSupport::Notifications.subscribe('idempotent.request') do |name, start, finish, request_id, payload|
-  notification = payload[:request].env['idempotent.request']
-  if notification['read']
-    Rails.logger.info "IdempotentRequest: Hit cached response from key #{notification['key']}, response: #{notification['read']}"
-  elsif notification['write']
-    Rails.logger.info "IdempotentRequest: Write: key #{notification['key']}, status: #{notification['write'][0]}, headers: #{notification['write'][1]}, unlocked? #{notification['unlocked']}"
-  elsif notification['concurrent_request_response']
-    Rails.logger.warn "IdempotentRequest: Concurrent request detected with key #{notification['key']}"
-  end
-end
-```
-
-## Custom options
-
-```ruby
-# application.rb
-config.middleware.use IdempotentRequest::Middleware,
-  header_key: 'X-Qonto-Idempotency-Key', # by default Idempotency-key
-  policy: IdempotentRequest::Policy,
-  callback: IdempotentRequest::RailsCallback,
-  storage: IdempotentRequest::RedisStorage.new(::Redis.current, expire_time: 1.day, namespace: 'idempotency_keys'),
-  conflict_response_status: 409
-```
-
-### Policy
-
-Custom class to decide whether the request should be idempotent.
-
-See *Example of integration for rails*
 
 ### Storage
 
@@ -153,22 +143,25 @@ class RailsCallback
 end
 ```
 
-### Conflict response status
+### Use ActiveSupport::Notifications to read events
 
-Define http status code that should be returned when a client sends concurrent requests with the same idempotency key.
-
-## Contributing
-
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/idempotent-request. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [Contributor Covenant](http://contributor-covenant.org) code of conduct.
+```ruby
+# config/initializers/idempotent_request.rb
+ActiveSupport::Notifications.subscribe('idempotent.request') do |name, start, finish, request_id, payload|
+  notification = payload[:request].env['idempotent.request']
+  if notification['read']
+    Rails.logger.info "IdempotentRequest: Hit cached response from key #{notification['key']}, response: #{notification['read']}"
+  elsif notification['write']
+    Rails.logger.info "IdempotentRequest: Write: key #{notification['key']}, status: #{notification['write'][0]}, headers: #{notification['write'][1]}, unlocked? #{notification['unlocked']}"
+  elsif notification['concurrent_request_response']
+    Rails.logger.warn "IdempotentRequest: Concurrent request detected with key #{notification['key']}"
+  end
+end
+```
 
 ## License
 
 The gem is available as open source under the terms of the [MIT License](http://opensource.org/licenses/MIT).
-
-## Code of Conduct
-
-Everyone interacting in the Idempotent::Request project’s codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/[USERNAME]/idempotent-request/blob/master/CODE_OF_CONDUCT.md).
-
 
 ## Releasing
 

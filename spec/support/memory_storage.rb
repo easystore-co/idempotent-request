@@ -4,7 +4,7 @@ module IdempotentRequest
       @memory = {}
     end
 
-    def lock(key)
+    def lock(key, expire_time = 3600)
       namespaced_key = lock_key(key)
       return false if @memory.key?(namespaced_key)
       @memory[namespaced_key] = true
@@ -20,7 +20,7 @@ module IdempotentRequest
       @memory[key]
     end
 
-    def write(key, payload)
+    def write(key, payload, expire_time = 3600)
       @memory[key] = payload
     end
 

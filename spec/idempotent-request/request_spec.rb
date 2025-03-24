@@ -30,14 +30,14 @@ RSpec.describe IdempotentRequest::Request do
     end
 
     context 'when is custom' do
-      let(:request) { described_class.new(env, header_key: 'X-Qonto-Idempotency-Key') }
+      let(:request) { described_class.new(env, header_key: 'Http-Custom-Idempotency-Key') }
 
       subject { request.key }
 
       context 'value is set' do
         let(:env) do
           default_env.merge!(
-            'HTTP_X_QONTO_IDEMPOTENCY_KEY' => 'custom-key'
+            'HTTP_CUSTOM_IDEMPOTENCY_KEY' => 'custom-key'
           )
         end
 
