@@ -3,7 +3,6 @@ module IdempotentRequest
     def initialize(app, config = {})
       @app = app
       @config = config.merge(load_config(config.fetch(:config_file, 'config/idempotent.yml')))
-      @policy = @config.fetch(:policy, IdempotentRequest::Policy)
       @concurrent_response_status = @config.fetch(:concurrent_response_status, 429)
       @replayed_response_header = @config.fetch(:replayed_response_header, 'Idempotency-Replayed')
       @notifier = ActiveSupport::Notifications if defined?(ActiveSupport::Notifications)
@@ -25,13 +24,16 @@ module IdempotentRequest
 
     private
 
-    def storage
-      @storage ||= RequestManager.new(request, config.merge(expire_time: expire_time_for_route))
+    def policy
+      @policy ||= config.fetch(:policy, IdempotentRequest::Policy).new(request, config)
     end
 
-    def expire_time_for_route
-      policy_instance = policy.new(request, config)
-      policy_instance.respond_to?(:expire_time_for_route) ? policy_instance.expire_time_for_route : nil
+    def storage
+      @storage ||= RequestManager.new(request, config.merge(expire_time: expire_time_for_request))
+    end
+
+    def expire_time_for_request
+      policy.respond_to?(:expire_time_for_request) ? policy.expire_time_for_request : config[:expire_time]
     end
 
     def read_idempotent_request
@@ -73,15 +75,10 @@ module IdempotentRequest
       Rack::Response.new(body, status, headers).finish
     end
 
-    attr_reader :app, :env, :config, :request, :policy, :notifier
+    attr_reader :app, :env, :config, :request, :notifier
 
     def process?
-      !request.key.to_s.empty? && should_be_idempotent?
-    end
-
-    def should_be_idempotent?
-      return false unless policy
-      policy.new(request, config).should?
+      !request.key.to_s.empty? && policy.should?
     end
 
     def instrument(request)

@@ -11,8 +11,8 @@ module IdempotentRequest
       matching_route.present?
     end
 
-    def expire_time_for_route
-      matching_route&.fetch(:expire_time, nil) || config[:expire_time]
+    def expire_time_for_request
+      matching_route&.fetch(:expire_time) || config[:expire_time]
     end
 
     def matching_route
