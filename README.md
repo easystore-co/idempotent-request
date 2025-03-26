@@ -105,7 +105,11 @@ module IdempotentRequest
     end
 
     def should?
-      # Custom logic to 
+      # Custom logic about the request should having idempotency mechanism?
+    end
+
+    def expire_time_for_request
+      # Custom logic to decide expire time for the cached response of the request
     end
   end
 end
