@@ -1,7 +1,7 @@
 # Idempotent Request Changelog #
 
 ## v0.2.2 ##
-* Use config/idempotent.yml file as configuration file
+* Use config/idempotency.yml file as configuration file
 * Support wildcard path in the configuration file
 * Consider explicitly 'false' from the storage.lock method as existed record and treat as concurrent, else just normal requets
 
