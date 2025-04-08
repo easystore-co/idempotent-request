@@ -26,9 +26,9 @@ And then execute:
 | Parameter | Description | Required/Optional |
 | --------- | ----------- | ----------------- |
 | storage | The storage instance that use to store the lock and cached response of idempotent requests | Required |
-| policy | The class that control this request should execute idempotency mechanism or not. Default will be referring to the config file (`config/idempotent.yml`) | Optional |
+| policy | The class that control this request should execute idempotency mechanism or not. Default will be referring to the config file (`config/idempotency.yml`) | Optional |
 | callback | The callback handler | Optional |
-| config_file | Customise the configuration file path. Default: `config/idempotent.yml` | Optional |
+| config_file | Customise the configuration file path. Default: `config/idempotency.yml` | Optional |
 
 
 ### Example of Usage
@@ -43,7 +43,7 @@ config.middleware.use IdempotentRequest::Middleware,
 
 ### Configuration File
 
-The configuration YAML file defines how the idempotency mechanism behaves. Default reading `config/idempotent.yml`
+The configuration YAML file defines how the idempotency mechanism behaves. Default reading `config/idempotency.yml`
 
 #### Configuration Options
 
