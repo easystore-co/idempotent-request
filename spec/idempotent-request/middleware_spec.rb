@@ -12,7 +12,7 @@ RSpec.describe IdempotentRequest::Middleware do
   let(:policy) do
     class_double('IdempotentRequest::policy', new: double(should?: true))
   end
-  let(:config_file) { 'spec/support/idempotent.yml' }
+  let(:config_file) { 'spec/support/idempotency.yml' }
 
   let(:middleware) do
     described_class.new(app,
