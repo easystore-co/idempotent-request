@@ -12,7 +12,7 @@ module IdempotentRequest
     end
 
     def expire_time_for_request
-      matching_route&.fetch(:expire_time) || config[:expire_time]
+      matching_route&.dig(:expire_time) || config[:expire_time] || 3600
     end
 
     private
