@@ -101,8 +101,8 @@ module IdempotentRequest
         symbolize_keys_deep!(config)
       end
 
-      environment = ENV["APP_ENV"] || ENV["RAILS_ENV"] || ENV["RACK_ENV"] || "default"
-      config[environment.to_sym] || {}
+      environment = ENV["APP_ENV"] || ENV["RAILS_ENV"] || ENV["RACK_ENV"]
+      config[environment.to_sym] || config[:default]
     end
     
     def symbolize_keys_deep!(hash)
