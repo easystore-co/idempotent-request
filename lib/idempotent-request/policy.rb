@@ -18,13 +18,11 @@ module IdempotentRequest
     private
 
     def matching_route
-      @matching_route ||= if config[:routes].empty?
-        nil
-      else
-        config[:routes].find do |idempotent_route|
-          path_matches?(idempotent_route[:path], request.path) &&
-            idempotent_route[:http_method] == request.request_method
-        end
+      return if config[:routes].nil? || config[:routes].empty?
+
+      @matching_route ||= config[:routes].find do |idempotent_route|
+        path_matches?(idempotent_route[:path], request.path) &&
+          idempotent_route[:http_method] == request.request_method
       end
     end
     
