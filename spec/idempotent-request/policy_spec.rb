@@ -17,6 +17,11 @@ RSpec.describe IdempotentRequest::Policy do
         path: '/api/v2/test/*',
         http_method: 'POST',
         expire_time: 180
+      },
+      {
+        path: '/admin/v2/store/orders',
+        http_method: 'POST',
+        expire_time: 180
       }
     ]
   }
@@ -27,6 +32,27 @@ RSpec.describe IdempotentRequest::Policy do
 
     context 'when the request matches a route' do
       let(:env) { default_env.merge('PATH_INFO' => '/api/v1/test/123', 'REQUEST_METHOD' => 'POST') }
+
+      it { is_expected.to be_truthy }
+    end
+
+    context 'when the request matches a route with trailing slash' do
+      let(:env) { default_env.merge('PATH_INFO' => '/admin/v2/store/orders/', 'REQUEST_METHOD' => 'POST') }
+
+      it { is_expected.to be_truthy }
+    end
+
+    context 'when the route has a trailing slash and the request does not' do
+      let(:routes) {
+        [
+          {
+            path: '/admin/v2/store/products/',
+            http_method: 'POST',
+            expire_time: 180
+          }
+        ]
+      }
+      let(:env) { default_env.merge('PATH_INFO' => '/admin/v2/store/products', 'REQUEST_METHOD' => 'POST') }
 
       it { is_expected.to be_truthy }
     end
@@ -49,6 +75,12 @@ RSpec.describe IdempotentRequest::Policy do
 
     context 'when the request matches a route' do
       let(:env) { default_env.merge('PATH_INFO' => '/api/v1/test/123', 'REQUEST_METHOD' => 'POST') }
+
+      it { is_expected.to eq(180) }
+    end
+
+    context 'when the request matches a route with trailing slash' do
+      let(:env) { default_env.merge('PATH_INFO' => '/admin/v2/store/orders/', 'REQUEST_METHOD' => 'POST') }
 
       it { is_expected.to eq(180) }
     end
