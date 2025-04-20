@@ -28,11 +28,15 @@ module IdempotentRequest
     
     # Checks if a request path matches a configured path pattern with wildcard support
     def path_matches?(pattern, path)
-      return pattern == path unless pattern.include?('*')
+      # Normalize paths by removing trailing slashes
+      normalized_pattern = pattern.chomp('/')
+      normalized_path = path.chomp('/')
+      
+      return normalized_pattern == normalized_path unless normalized_pattern.include?('*')
 
       # Convert wildcard pattern to regex
-      regex_pattern = Regexp.new("^#{Regexp.escape(pattern).gsub('\*', '([^/]*)')}$")
-      regex_pattern.match?(path)
+      regex_pattern = Regexp.new("^#{Regexp.escape(normalized_pattern).gsub('\*', '([^/]*)')}$")
+      regex_pattern.match?(normalized_path)
     end
   end
 end
